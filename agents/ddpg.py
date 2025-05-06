@@ -40,10 +40,9 @@ class DDPG(nn.Module):
             target_network_params.data.copy_(target_network_params.data * (1.0 - rate) + network_params.data * rate)
 
     def get_action(self, x):
-        mu, std = self.actor(x)  # mu ∈ [-1, 1] if tanh is used
-        noise = torch.tensor(self.noise.sample(), dtype=torch.float32).to(self.device)
-        action = (mu + noise).clamp(-1.0, 1.0) * self.action_max
-        return action.detach(), None
+        mu, std = self.actor(x)
+        action = mu + torch.tensor(self.noise.sample(), device=self.device, dtype=mu.dtype)
+        return (action * self.action_max).clamp(-self.action_max, self.action_max), std
 
     def get_deterministic_action(self, x):
         mu, _ = self.actor(x)
@@ -62,9 +61,12 @@ class DDPG(nn.Module):
         # targets = rewards + self.args.gamma * (1 - dones) * self.target_q(next_states, self.target_actor(next_states)[0])
 
         next_action = self.target_actor(next_states)[0].detach()
-        noise = (torch.randn_like(next_action) * 0.2).clamp(-0.2 * self.action_max, 0.2*self.action_max)
-        next_action = (next_action + noise).clamp(-self.action_max, self.action_max)
-        targets = rewards + self.args.gamma * (1 - dones) * self.target_q(next_states, next_action).detach()
+
+
+        noise = (torch.randn_like(next_action) * self.args.policy_noise).clamp(-self.args.noise_clip, self.args.noise_clip)
+        noisy_next_action = (next_action + noise).clamp(-1, 1) * self.action_max
+
+        targets = rewards + self.args.gamma * (1 - dones) * self.target_q(next_states, noisy_next_action).detach()
 
         # q_loss = F.smooth_l1_loss(self.q(states,actions), targets.detach())
         q_loss = F.mse_loss(self.q(states, actions), targets.detach())
