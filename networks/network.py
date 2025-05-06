@@ -5,8 +5,8 @@ import torch.nn.functional as F
 from networks.base import Network
 
 class Actor(Network):
-    def __init__(self, layer_num, input_dim, output_dim, hidden_dim, activation_function = torch.tanh,last_activation = None, trainable_std = False):
-        super(Actor, self).__init__(layer_num, input_dim, output_dim, hidden_dim, activation_function ,last_activation)
+    def __init__(self, layer_num, input_dim, output_dim, hidden_dim, activation_function = torch.tanh,last_activation = None, trainable_std = False, use_layernorm=False):
+        super(Actor, self).__init__(layer_num, input_dim, output_dim, hidden_dim, activation_function ,last_activation, use_layernorm)
         self.trainable_std = trainable_std
         if self.trainable_std == True:
             self.logstd = nn.Parameter(torch.zeros(1, output_dim))
@@ -20,8 +20,8 @@ class Actor(Network):
         return mu,std
 
 class Critic(Network):
-    def __init__(self, layer_num, input_dim, output_dim, hidden_dim, activation_function, last_activation = None):
-        super(Critic, self).__init__(layer_num, input_dim, output_dim, hidden_dim, activation_function ,last_activation)
+    def __init__(self, layer_num, input_dim, output_dim, hidden_dim, activation_function, last_activation = None, use_layernorm=False):
+        super(Critic, self).__init__(layer_num, input_dim, output_dim, hidden_dim, activation_function ,last_activation, use_layernorm)
         
     def forward(self, *x):
         x = torch.cat(x,-1)

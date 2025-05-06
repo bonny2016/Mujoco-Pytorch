@@ -1,36 +1,32 @@
-""""
-Project for Udacity Danaodgree in Deep Reinforcement Learning (DRL)
-Code Expanded and Adapted from Code provided by Udacity DRL Team, 2018.
-"""
-
-import copy
-import random
 import numpy as np
 
-
 class OUNoise:
-    """Ornstein-Uhlenbeck process."""
-
-    def __init__(self, size, seed, mu=0.0, theta=0.1, sigma=.1, sigma_min = 0.05, sigma_decay=.99):
-        """Initialize parameters and noise process."""
-        self.mu = mu * np.ones(size)
-        self.theta = theta
+    def __init__(self, mu, sigma=0.2, theta=0.15, dt=1e-2, x0=None, sigma_min=0.05, sigma_decay=0.99):
+        self.mu = mu
         self.sigma = sigma
         self.sigma_min = sigma_min
         self.sigma_decay = sigma_decay
-        self.seed = random.seed(seed)
-        self.size = size
+        self.theta = theta
+        self.dt = dt
+        self.x0 = x0
         self.reset()
+
+    def __call__(self):
+        x = (
+            self.x_prev
+            + self.theta * (self.mu - self.x_prev) * self.dt
+            + self.sigma * np.sqrt(self.dt) * np.random.normal(size=self.mu.shape)
+        )
+        self.x_prev = x
+        return x
 
     def reset(self):
         """Reset the internal state (= noise) to mean (mu)."""
-        self.state = copy.copy(self.mu)
-        """Resduce  sigma from initial value to min"""
-        self.sigma = max(self.sigma_min, self.sigma*self.sigma_decay)
+        self.x_prev = self.x0 if self.x0 is not None else np.zeros_like(self.mu)
+
+    def decay_sigma(self):
+        """Reduce sigma gradually to a minimum value."""
+        self.sigma = max(self.sigma_min, self.sigma * self.sigma_decay)
 
     def sample(self):
-        """Update internal state and return it as a noise sample."""
-        x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.random.standard_normal(self.size)
-        self.state = x + dx
-        return self.state
+        return self.__call__()
